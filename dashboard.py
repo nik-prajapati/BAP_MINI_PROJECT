@@ -233,7 +233,11 @@ app.layout = html.Div([
     #  col-2 => content
 
     html.Div([
-    html.H1(children='Student Empowerment Policy', style={'textAlign':'center','color':'white'}),
+    html.H1(children=[
+    html.Span('EmpowerED', style={'color': 'limegreen'}),
+    ' Analytics'
+], style={'textAlign': 'center', 'color': 'white', 'margin': '10px', 'padding': '5px'}),
+
     # page 1
     html.Div(   
             [page_1_graph_1,page_1_graph_2,page_1_graph_3,page_1_graph_4],
