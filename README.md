@@ -5,6 +5,6 @@
 Navigate to the directory containing watcher.py.
 Ensure that the data source is configured in the script.
 - Run cmd : *python watcher.py*
-- Run Dashboard fil cmd :  *python dasshboard.py*
+- Run Dashboard fil cmd :  *python dashboard.py*
 
 Access the dashboard at http://localhost:8050/.
