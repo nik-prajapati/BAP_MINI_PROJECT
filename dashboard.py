@@ -27,7 +27,7 @@ page_1_graph_1= html.Div([
                     #  {'label': 'Line', 'value': 'line'},
                      
                  ],
-                 value='bar',
+                 value='treemap',
                  id='dropdown-graph-type',
                  placeholder="Select graph type",
                  )
@@ -63,7 +63,8 @@ def update_graph(selected_class, graph_type):
 
         data=df[df['Class'].isin(selected_class)].pivot_table(index=df['Date'].dt.year, columns='Class', values='Sanctioned Amount', aggfunc='sum').reset_index().fillna(0)
         
-        fig=px.bar(data, x='Date', y=selected_class, title='Sanctioned Amount vs Year', template='plotly_dark',barmode = 'group',)
+        fig = px.bar(data, x='Date', y=selected_class, title='Sanctioned Amount vs Year', template='plotly_dark', barmode='group',
+             )
 
 
         return fig
@@ -112,37 +113,62 @@ def update_graph(selected_class, graph_type):
     return fig
 
 
-page_1_graph_2=html.Div([
+page_1_graph_2 = html.Div([
     dcc.Dropdown(
         options=[
             {'label': 'All', 'value': 'all'}
         ] + [{'label': cls, 'value': cls} for cls in df['Class'].unique()],
-
-        id='class-dropdown',
+        id='class-distribution-dropdown',
         value='all',  # Set default value to 'All'
         placeholder='Select a class'
     ),
+   
+    dcc.Dropdown(
+        options=[
+            {'label': 'All', 'value': 'all'}
+        ] + [{'label': year, 'value': year} for year in sorted(df['year'].unique())],
+        id='year-distribution-dropdown',
+        value='all',  # Set default value to 'All'
+        placeholder='Select a year'
+    ),
     dcc.Graph(id='scheme-pie-chart')
-],className='p1g1')
+], className='p1g1')
 
 @app.callback(
     Output('scheme-pie-chart', 'figure'),
-    [Input('class-dropdown', 'value')]
+    [Input('class-distribution-dropdown', 'value'),
+     Input('year-distribution-dropdown', 'value')]
 )
-def update_pie_chart(selected_class):
-    if selected_class == 'all':
-        scheme_distribution = df['Description of Scheme'].value_counts()
-    else:
-        class_data = df[df['Class'] == selected_class]
-        scheme_distribution = class_data['Description of Scheme'].value_counts()
+def update_pie_chart(selected_class, selected_year):
+    filtered_df = df.copy()
+
+    if selected_class != 'all':
+        filtered_df = filtered_df[filtered_df['Class'] == selected_class]
+    if selected_year != 'all':
+        filtered_df = filtered_df[filtered_df['year'] == selected_year]
+
+    scheme_distribution = filtered_df['Description of Scheme'].value_counts()
+
+    # Define custom color scheme
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
     pie_chart_figure = go.Figure(
-        data=[go.Pie(labels=scheme_distribution.index, values=scheme_distribution.values)]
+        data=[go.Pie(
+            labels=scheme_distribution.index,
+            values=scheme_distribution.values,
+            hole=0.5,  # Set the size of the hole in the middle of the pie chart
+            marker=dict(colors=colors),
+              # Set custom color scheme
+            
+        )]
     )
-    if selected_class == 'all':
-        title = 'Overall Distribution of Students Based on Scheme'
-    else:
-        title = f'Distribution of Students Based on Scheme in Class {selected_class}'
+
+    title = 'Distribution of Students Based on Scheme'
+    if selected_class != 'all':
+        title += f' in Class {selected_class}'
+    if selected_year != 'all':
+        title += f' in Year {selected_year}'
+
     pie_chart_figure.update_layout(
         title=title,
         template='plotly_dark',
@@ -157,8 +183,6 @@ def update_pie_chart(selected_class):
             yanchor='middle'  # Anchor legend vertically at the middle of the chart
         )
     )
-
-
 
     return pie_chart_figure
 
@@ -241,7 +265,7 @@ page_1_graph_5=html.Div([
     dcc.Graph(id='yearly-count-graph'),
 
     ],id='record-count-graph')
-    ])
+    ],className='p1g1')
 
 @app.callback(
     [#Output('monthly-count-graph', 'figure'),
@@ -312,8 +336,48 @@ def update_graph(selected_scheme, selected_aggregation):
     fig = px.bar(x=aggregated_value.index, y=aggregated_value.values,
                  title=f'{selected_aggregation.capitalize()} Sanctioned Amount for {selected_scheme}',
                  labels={'x': 'Year', 'y': f'{selected_aggregation.capitalize()} Sanctioned Amount (INR)'},
-                 color=aggregated_value.index,template='plotly_dark')
+                 color=aggregated_value.index,template='plotly_dark',color_discrete_sequence=['#7FD4C1'])
     return fig
+
+
+page_1_graph_7 = html.Div([
+    dcc.Dropdown(
+        id='trend-sanctioned-amount-scheme-dropdown',
+        options=[{'label': scheme, 'value': scheme} for scheme in df['Description of Scheme'].unique()],
+        value=df['Description of Scheme'].unique()[0],  # Set default value to the first scheme
+        placeholder='Select a Scheme'
+    ),
+
+    dcc.Graph(id='trend-sanctioned-amount-per-scheme-graph-container')
+],id='trend-sanctioned-amount-scheme-container')
+
+@app.callback(
+    Output('trend-sanctioned-amount-per-scheme-graph-container', 'figure'),
+    [Input('trend-sanctioned-amount-scheme-dropdown', 'value')]
+)
+
+def generate_trend_sanctioned_amount_per_scheme_graph(selected_scheme):
+    trend_sanctioned_amount_per_scheme = df.groupby(['Description of Scheme', 'year', 'month'])[
+        'Sanctioned Amount'].sum().reset_index().copy()
+    
+    trend_sanctioned_amount_per_scheme_fig = go.Figure()
+    for scheme in trend_sanctioned_amount_per_scheme['Description of Scheme'].unique():
+        if scheme == selected_scheme:
+            temp = trend_sanctioned_amount_per_scheme[
+                trend_sanctioned_amount_per_scheme['Description of Scheme'] == scheme].copy()  # Make a copy here
+            temp['year'] = temp['year'].astype(str)
+            temp['month'] = temp['month'].astype(str)
+            trend_sanctioned_amount_per_scheme_fig.add_trace(go.Scatter(x=temp['year'] + '-' + temp['month'],
+                                                                         y=temp['Sanctioned Amount'],
+                                                                         mode='lines+markers',
+                                                                         name=scheme))
+    trend_sanctioned_amount_per_scheme_fig.update_layout(
+        title='Trend of Sanctioned Amounts Over Time for Scheme: ' + selected_scheme,
+        xaxis_title='Date',
+        yaxis_title='Sanctioned Amount',
+        template='plotly_dark')
+    return trend_sanctioned_amount_per_scheme_fig
+
 
 
 app.layout = html.Div([
@@ -346,7 +410,11 @@ app.layout = html.Div([
             ),
 
     # page 2
-    
+    html.Div(   
+            [page_1_graph_7],
+            id="page-2"
+            ),
+
 
 
     # page 3

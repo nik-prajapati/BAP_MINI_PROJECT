@@ -43,3 +43,9 @@ h1{
     max-height:500px;
 }
 
+
+
+#trend-sanctioned-amount-scheme-container{
+    gap: 1fr;
+    margin: 10px;
+}
