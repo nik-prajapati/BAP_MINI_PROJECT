@@ -379,6 +379,50 @@ def generate_trend_sanctioned_amount_per_scheme_graph(selected_scheme):
     return trend_sanctioned_amount_per_scheme_fig
 
 
+page_1_graph_8=html.Div([
+    dcc.Dropdown(
+        id='sentiment-scheme-dropdown',
+        options=[{'label': scheme, 'value': scheme} for scheme in df['Description of Scheme'].unique()],
+        value=df['Description of Scheme'].unique()[0],
+        placeholder='Select a Scheme'
+    ),
+    dcc.Graph(id='sentiment-scheme-graph')
+],className='p1g1' )
+
+# Define the callback to update the graph
+@app.callback(
+    Output('sentiment-scheme-graph', 'figure'),
+    [Input('sentiment-scheme-dropdown', 'value')]
+)
+
+def update_graph(selected_scheme):
+    filtered_data = df[df['Description of Scheme'] == selected_scheme]
+
+    grouped_data=filtered_data.groupby(['year','sentiment_label'])['Record No.'].size().reset_index(name='count')
+
+    sentiment_over_time_fig = go.Figure()
+
+    # Loop through each unique sentiment label
+    for sentiment in filtered_data['sentiment_label'].unique():
+        # Filter the grouped data for the current sentiment label
+        temp = grouped_data[grouped_data['sentiment_label'] == sentiment]
+        
+        # Add a trace for the current sentiment label
+        sentiment_over_time_fig.add_trace(go.Scatter(x=temp['year'].astype(str),
+                                                     y=temp['count'],
+                                                     mode='lines+markers',
+                                                     name=sentiment))
+
+    # Update layout
+    sentiment_over_time_fig.update_layout(title=f'Distribution of Sentiment Labels Over Time for Scheme: {selected_scheme}',
+                                           xaxis_title='Year',
+                                           yaxis_title='Count',
+                                           template='plotly_dark')
+
+    
+    return sentiment_over_time_fig
+
+
 
 app.layout = html.Div([
 
@@ -405,7 +449,7 @@ app.layout = html.Div([
 
     # page 1
     html.Div(   
-            [page_1_graph_1,page_1_graph_2,page_1_graph_6,page_1_graph_4,page_1_graph_5,page_1_graph_3],
+            [page_1_graph_1,page_1_graph_2,page_1_graph_6,page_1_graph_8,page_1_graph_5,page_1_graph_3,page_1_graph_4],
             id="page-1"
             ),
 
