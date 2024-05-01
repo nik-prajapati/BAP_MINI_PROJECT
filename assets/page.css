@@ -12,11 +12,14 @@ body{
     background-color: rgb(15, 12, 12);
 }
 
+h1{
+    font-family: 'Roboto', sans-serif; 
+}
 
 #page-1 {
     display: grid;
     grid-template-columns: 1fr 1fr; 
-    grid-template-rows: minmax(auto, 500px); 
+    grid-template-rows: minmax(500px, 500px); 
     gap: 1fr;
     
 }
@@ -34,4 +37,9 @@ body{
     margin: 0 auto; /* Center horizontally */
 }
 
+#record-count-graph{
+    display: flex;
+    flex-direction: column;
+    max-height:500px;
+}
 

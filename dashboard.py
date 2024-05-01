@@ -6,6 +6,11 @@ import pandas as pd
 
 df = pd.read_csv('dummy_data.csv')
 df.Date=pd.to_datetime(df.Date)
+# df_grouped_scheme_year = df.groupby(['Description of Scheme', 'year'])['Sanctioned Amount'].agg({
+#     'Total Sanctioned Amount': 'sum',
+#     'Mean Sanctioned Amount': 'mean',
+#     'Max Sanctioned Amount': 'max'
+# }).reset_index()
 
 
 app =Dash(__name__,external_stylesheets=['assets/page.css'], suppress_callback_exceptions=True)
@@ -215,6 +220,102 @@ def update_sentiment_over_time_graph(id):
     return sentiment_over_time_fig
 
 
+page_1_graph_5=html.Div([
+
+    dcc.Dropdown(
+        id='class-dropdown-record-count',
+        options=[{'label': 'All', 'value': 'all'} ]+[{'label': cls, 'value': cls} for cls in df['Class'].unique()],
+        value=df['Class'].unique()[0],
+        placeholder='Select a class'
+    ),
+    dcc.Dropdown(
+        id='scheme-dropdown-record-count',
+        options=[{'label': scheme, 'value': scheme} for scheme in df['Description of Scheme'].unique()],
+        value=df['Description of Scheme'].unique()[0],
+        placeholder='Select a scheme'
+    ),
+
+    html.Div([
+
+    #dcc.Graph(id='monthly-count-graph'),
+    dcc.Graph(id='yearly-count-graph'),
+
+    ],id='record-count-graph')
+    ])
+
+@app.callback(
+    [#Output('monthly-count-graph', 'figure'),
+     Output('yearly-count-graph', 'figure')],
+    [Input('class-dropdown-record-count', 'value'),
+     Input('scheme-dropdown-record-count', 'value')]
+)
+
+def update_record_count_graphs(selected_class, selected_scheme):
+
+    if(selected_class == 'all'):
+        class_data = df
+    else  :
+        class_data = df[df['Class'] == selected_class]
+    
+    scheme_data = class_data[class_data['Description of Scheme'] == selected_scheme]
+    monthly_count = scheme_data.groupby('month').size().reset_index(name='count')
+    yearly_count = scheme_data.groupby('year').size().reset_index(name='count')
+
+    yearly_count_fig = go.Figure(
+        data=[go.Bar(
+            x=yearly_count['year'],
+            y=yearly_count['count'],
+            marker_color='royalblue'
+        )]
+    )
+    yearly_count_fig.update_layout(
+        title='Yearly Record Count for Selected Class and Scheme',
+        xaxis_title='Year',
+        yaxis_title='Record Count',
+        template='plotly_dark'
+    )
+
+    return (yearly_count_fig,)  
+
+page_1_graph_6 = html.Div([
+    dcc.Dropdown(
+        id='scheme-dropdown',
+        options=[{'label': 'All', 'value': 'all'}]+[{'label': scheme, 'value': scheme} for scheme in df['Description of Scheme'].unique()],
+        value=df['Description of Scheme'].unique()[0],
+        placeholder='Select a Scheme'
+    ),
+
+    dcc.Dropdown(
+        id='scheme-aggregation-dropdown',  # Corrected ID
+        options=[{'label': option, 'value': option} for option in ['mean', 'sum']],
+        value='sum',
+        placeholder='Select an Aggregation Option'
+    ),
+
+    dcc.Graph(id='scheme-amount-graph')
+],className='p1g1')
+
+@app.callback(
+    Output('scheme-amount-graph', 'figure'),
+    [Input('scheme-dropdown', 'value'),
+     Input('scheme-aggregation-dropdown', 'value')]  # Corrected ID
+)
+def update_graph(selected_scheme, selected_aggregation):
+
+    if(selected_scheme == 'all'):
+        filtered_df = df
+    else  :  
+        filtered_df = df[df['Description of Scheme'] == selected_scheme]
+
+    aggregated_value = filtered_df.groupby('year')['Sanctioned Amount'].agg(str(selected_aggregation))
+
+    fig = px.bar(x=aggregated_value.index, y=aggregated_value.values,
+                 title=f'{selected_aggregation.capitalize()} Sanctioned Amount for {selected_scheme}',
+                 labels={'x': 'Year', 'y': f'{selected_aggregation.capitalize()} Sanctioned Amount (INR)'},
+                 color=aggregated_value.index,template='plotly_dark')
+    return fig
+
+
 app.layout = html.Div([
 
     # col-1 => sidebar
@@ -240,12 +341,12 @@ app.layout = html.Div([
 
     # page 1
     html.Div(   
-            [page_1_graph_1,page_1_graph_2,page_1_graph_3,page_1_graph_4],
+            [page_1_graph_1,page_1_graph_2,page_1_graph_6,page_1_graph_4,page_1_graph_5,page_1_graph_3],
             id="page-1"
-            )
+            ),
 
     # page 2
-
+    
 
 
     # page 3
